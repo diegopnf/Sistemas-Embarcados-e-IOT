@@ -13,7 +13,7 @@ public class Subscriber {
     client.setCallback( new SimpleMqttCallBack() );
     client.connect();
 
-    client.subscribe("iot_data");
+    client.subscribe("pzem/tensao");
 
   }
 
