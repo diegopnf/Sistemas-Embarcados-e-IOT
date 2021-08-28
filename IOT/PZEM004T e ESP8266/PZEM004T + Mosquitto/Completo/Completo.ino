@@ -37,7 +37,7 @@ void setup() {
 void loop() {
   reconectarMQTT();
   medirEnergia();
-  publicarTensaoNoTopico();
+  publicarEnergiaNoTopico();
   serialLeitura();
 }
 
@@ -47,7 +47,7 @@ void reconectarMQTT() {
   }
 }
 
-void publicarTensaoNoTopico() {
+void publicarEnergiaNoTopico() {
   client.publish(topicoTensao, String(tensao).c_str(), true);
   client.publish(topicoCorrente, String(corrente).c_str(), true);
   client.publish(topicoPotencia, String(potencia).c_str(), true);
