@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Medidor de Energia</title>
+  <style>
+    body {
+      padding-top: 10px;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-size: 11px;
+      color: black;
+      margin: 5px;
+      background: #a0a0a0 url("http://internetecoisas.com.br/img/Background.jpg") no-repeat fixed center;
+      background-size: cover;
+    }
+    th {
+      padding: 5px;
+      border-radius: 12px;
+      color: #ffffff;
+      background: #404040;
+      border: #000000 solid 3px;
+    }
+    td {
+      text-align: center;
+      padding: 5px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: #000000 solid 3px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+    /***************************************************
+     * Cliente MQTT
+     */
+
+    // Variáveis para cliente MQTT
+    var mqtt;
+    var reconnectTimeout = 2000;
+    var host = '192.168.0.24';
+    var port = 9001;
+    function onConnect() {
+      // Conexao ao Broker
+      console.log('Conectado');
+      mqtt.subscribe('pzem/tensao');
+      mqtt.subscribe('pzem/corrente');
+      mqtt.subscribe('pzem/potencia');
+      mqtt.subscribe('pzem/frequencia');
+      mqtt.subscribe('pzem/potenciahora');
+    }
+    function onError(message) {
+      // Ocorrencia de erro
+      console.log('Falha: ' + message.errorCode + ' ' + message.errorMessage);
+      setTimeout(MQTTConnect, reconnectTimeout);
+    }
+    function MQTTConnect() {
+        // Conecta no Broker
+        console.log('Conectando ' + host + ' ' + port);
+        mqtt = new Paho.MQTT.Client(host, port, 'IeCJSClient' + parseInt(Math.random() * 1e5));
+        var options = { timeout: 10,
+                        keepAliveInterval: 10,
+                        onSuccess: onConnect,
+                        onFailure: onError
+                      };
+        mqtt.onMessageArrived = onMessageArrived;
+        mqtt.onConnectionLost = onError;
+        mqtt.connect(options);
+        //inicial();
+      }
+
+    function onMessageArrived(msg) {
+    var x;
+  	 // Tópico tensao
+      if (msg.destinationName == 'pzem/tensao') {
+    	  
+    	  x = parseFloat(msg.payloadString);
+        document.getElementById('tensao').innerText = msg.payloadString;
+        
+        // Gráfico Tensão
+        dataVoltageG.setValue(0, 1, x);
+        chartVoltageG.draw(dataVoltageG, optionsVoltageG);
+
+        // Gráfico Histórico
+        dataVoltageH.addRows([[new Date(), x]]);
+        if (dataVoltageH.getNumberOfRows() > 30) {
+          // Excluir linha de dados
+          dataVoltageH.removeRow(0);
+        }
+        chartVoltageH.draw(dataVoltageH, optionsVoltageH);
+        
+        
+        // Tópico corrente
+      } else if (msg.destinationName == 'pzem/corrente') {
+    	  
+          x = parseFloat(msg.payloadString);
+          document.getElementById('corrente').innerText = msg.payloadString;
+          
+          // Gráfico Corrente
+          dataCorrenteG.setValue(0, 1, x);
+          chartCorrenteG.draw(dataCorrenteG, optionsCorrenteG);
+
+          // Gráfico Histórico
+          dataCorrenteH.addRows([[new Date(), x]]);
+          if (dataCorrenteH.getNumberOfRows() > 30) {
+            // Excluir linha de dados
+            dataCorrenteH.removeRow(0);
+          }
+          chartCorrenteH.draw(dataCorrenteH, optionsCorrenteH);
+          
+          
+       // Tópico Potencia
+      } else if (msg.destinationName == 'pzem/potencia') {
+    	  
+    	  x = parseFloat(msg.payloadString);
+          document.getElementById('potencia').innerText = msg.payloadString;
+          
+          // Gráfico Corrente
+          dataPotenciaG.setValue(0, 1, x);
+          chartPotenciaG.draw(dataPotenciaG, optionsPotenciaG);
+
+          // Gráfico Histórico
+          dataPotenciaH.addRows([[new Date(), x]]);
+          if (dataPotenciaH.getNumberOfRows() > 30) {
+            // Excluir linha de dados
+            dataPotenciaH.removeRow(0);
+          }
+          chartPotenciaH.draw(dataPotenciaH, optionsPotenciaH);
+          
+     
+          // Tópico Potencia Hora
+       }  else if (msg.destinationName == 'pzem/potenciahora') {
+    	  
+    	  x = parseFloat(msg.payloadString);
+          document.getElementById('potenciahora').innerText = msg.payloadString;
+          
+          // Gráfico Corrente
+          dataPotenciahoraG.setValue(0, 1, x);
+          chartPotenciahoraG.draw(dataPotenciahoraG, optionsPotenciahoraG);
+
+          // Gráfico Histórico
+          dataPotenciahoraH.addRows([[new Date(), x]]);
+          if (dataPotenciahoraH.getNumberOfRows() > 30) {
+            // Excluir linha de dados
+            dataPotenciahoraH.removeRow(0);
+          }
+          chartPotenciahoraH.draw(dataPotenciahoraH, optionsPotenciahoraH);
+          
+           
+      
+    }
+    
+    }
+
+    /***************************************************
+     * Gráficos
+     */
+
+    // Instancias dos gráficos
+    google.charts.load('current', {'packages':['gauge', 'corechart'], 'language': 'pt-br', 'mapsApiKey': 'AIzaSyBWF8UvD9TyJSKsSCKP3PtHisRPbG4zuRA'});
+    google.charts.setOnLoadCallback(drawVoltageG);
+    google.charts.setOnLoadCallback(drawVoltageH);
+    google.charts.setOnLoadCallback(drawCorrenteG);
+    google.charts.setOnLoadCallback(drawCorrenteH);
+    google.charts.setOnLoadCallback(drawPotenciaG);
+    google.charts.setOnLoadCallback(drawPotenciaH);
+    //google.charts.setOnLoadCallback(drawFrequenciaG);
+    //google.charts.setOnLoadCallback(drawFrequenciaH);
+    
+    google.charts.setOnLoadCallback(drawPotenciahoraG);
+    google.charts.setOnLoadCallback(drawPotenciahoraH);
+
+    // Variáveis para gráficos
+    var chartVoltageG, dataVoltageG, optionsVoltageG, chartVoltageH, dataVoltageH, optionsVoltageH;
+    var chartCorrenteG, dataCorrenteG, optionsCorrenteG, chartCorrenteH, dataCorrenteH, optionsCorrenteH;
+    var chartPotenciaG, dataPotenciaG, optionsPotenciaG, chartPotenciaH, dataPotenciaH, optionsPotenciaH;
+    //var chartFrequenciaG, dataFrequenciaG, optionsFrequenciaG, chartFrequenciaH, dataFrequenciaH, optionsFrequenciaH;
+    var chartPotenciahoraG, dataPotenciahoraG, optionsPotenciahoraG, chartPotenciahoraH, dataPotenciahoraH, optionsPotenciahoraH;
+
+    //Tensao
+    function drawVoltageG() {
+      // Desenha voltímetro
+      dataVoltageG = google.visualization.arrayToDataTable([
+        ['Label', 'Value'],
+        ['Volts', 0]
+      ]);
+      optionsVoltageG = {
+        min: 0, max: 230,
+        majorTicks: ["0", "50", "100", "150", "200", "230"],
+        minorTicks: 0,
+        yellowFrom: 0, yellowTo: 110,
+        greenFrom: 110, greenTo: 220,
+        redFrom: 220, redTo: 230
+      };
+      chartVoltageG = new google.visualization.Gauge(document.getElementById('voltageG'));
+      chartVoltageG.draw(dataVoltageG, optionsVoltageG);
+    }
+
+    function drawVoltageH() {
+      // Desenha histórico
+      dataVoltageH = new google.visualization.DataTable();
+      dataVoltageH.addColumn('datetime', 'Hora');
+      dataVoltageH.addColumn('number', 'Tensão');
+      optionsVoltageH = {
+        title: 'Histórico de Tensão',
+        pointSize: 3,
+        legend: 'none',
+        animation:{
+          duration: 500,
+          easing: 'out'
+        },
+        curveType: 'function',
+        hAxis: {
+          title: 'Horário',
+          format: 'HH:mm:ss',
+          gridlines: {
+            count: 6
+          }
+        },
+        vAxis: {
+          title: 'Tensão (V)',
+          format: 'long',
+          gridlines: {
+            count: 7
+          },
+          viewWindow: {
+            min: 0,
+            max: 230
+          }
+        }
+      };
+      dataVoltageH.addRows([[new Date(), 0]]);
+      chartVoltageH = new google.visualization.LineChart(document.getElementById('voltageH'));
+      chartVoltageH.draw(dataVoltageH, optionsVoltageH);
+      }
+    
+    //Corrente
+    function drawCorrenteG() {
+        // Desenha voltímetro
+        dataCorrenteG = google.visualization.arrayToDataTable([
+          ['Label', 'Value'],
+          ['Ampere', 0]
+        ]);
+        optionsCorrenteG = {
+          min: 0, max: 10,
+          majorTicks: ["0", "2", "4", "6", "8", "10"],
+          minorTicks: 0,
+          //yellowFrom: 0, yellowTo: 0.2,
+          //greenFrom: 0.2, greenTo: 0.6,
+          redFrom: 8, redTo: 10,
+        };
+        chartCorrenteG = new google.visualization.Gauge(document.getElementById('correnteG'));
+        chartCorrenteG.draw(dataCorrenteG, optionsCorrenteG);
+      }
+
+      function drawCorrenteH() {
+        // Desenha histórico
+        dataCorrenteH = new google.visualization.DataTable();
+        dataCorrenteH.addColumn('datetime', 'Hora');
+        dataCorrenteH.addColumn('number', 'Corrente');
+        optionsCorrenteH = {
+          title: 'Histórico de Corrente',
+          pointSize: 3,
+          legend: 'none',
+          animation:{
+            duration: 500,
+            easing: 'out'
+          },
+          curveType: 'function',
+          hAxis: {
+            title: 'Horário',
+            format: 'HH:mm:ss',
+            gridlines: {
+              count: 6
+            }
+          },
+          vAxis: {
+            title: 'Corrente (A)',
+            format: 'long',
+            gridlines: {
+              count: 7
+            },
+            viewWindow: {
+              min: 0,
+              max: 10
+            }
+          }
+        };
+        dataCorrenteH.addRows([[new Date(), 0]]);
+        chartCorrenteH = new google.visualization.LineChart(document.getElementById('correnteH'));
+        chartCorrenteH.draw(dataCorrenteH, optionsCorrenteH);
+        }
+      
+      
+      //Potencia
+      function drawPotenciaG() {
+        // Desenha voltímetro
+        dataPotenciaG = google.visualization.arrayToDataTable([
+          ['Label', 'Value'],
+          ['Watts', 0]
+        ]);
+        optionsPotenciaG = {
+          min: 0, max: 2300,
+          majorTicks: ["0", "500", "1000", "1500", "2300"],
+          minorTicks: 0,
+          //yellowFrom: 0, yellowTo: 30,
+          //greenFrom: 30, greenTo: 60,
+          redFrom: 2000, redTo: 2300
+        };
+        chartPotenciaG = new google.visualization.Gauge(document.getElementById('potenciaG'));
+        chartPotenciaG.draw(dataPotenciaG, optionsPotenciaG);
+      }
+
+      function drawPotenciaH() {
+        // Desenha histórico
+        dataPotenciaH = new google.visualization.DataTable();
+        dataPotenciaH.addColumn('datetime', 'Hora');
+        dataPotenciaH.addColumn('number', 'Potência');
+        optionsPotenciaH = {
+          title: 'Histórico de Potência',
+          pointSize: 3,
+          legend: 'none',
+          animation:{
+            duration: 500,
+            easing: 'out'
+          },
+          curveType: 'function',
+          hAxis: {
+            title: 'Horário',
+            format: 'HH:mm:ss',
+            gridlines: {
+              count: 6
+            }
+          },
+          vAxis: {
+            title: 'Potência (W)',
+            format: 'long',
+            gridlines: {
+              count: 7
+            },
+            viewWindow: {
+              min: 0,
+              max: 2300
+            }
+          }
+        };
+        dataPotenciaH.addRows([[new Date(), 0]]);
+        chartPotenciaH = new google.visualization.LineChart(document.getElementById('potenciaH'));
+        chartPotenciaH.draw(dataPotenciaH, optionsPotenciaH);
+        }
+     
+      
+    //Potência Hora
+      function drawPotenciahoraG() {
+        // Desenha voltímetro
+        dataPotenciahoraG = google.visualization.arrayToDataTable([
+          ['Label', 'Value'],
+          ['KW/H', 0]
+        ]);
+        optionsPotenciahoraG = {
+          min: 0, max: 300,
+          majorTicks: ["0", "50", "100", "150", "200", "250", "300"],
+          minorTicks: 0,
+          yellowFrom: 0, yellowTo: 210,
+          greenFrom: 210, greenTo: 230,
+          redFrom: 230, redTo: 300
+        };
+        chartPotenciahoraG = new google.visualization.Gauge(document.getElementById('potenciahoraG'));
+        chartPotenciahoraG.draw(dataPotenciahoraG, optionsPotenciahoraG);
+      }
+
+      function drawPotenciahoraH() {
+        // Desenha histórico
+        dataPotenciahoraH = new google.visualization.DataTable();
+        dataPotenciahoraH.addColumn('datetime', 'Hora');
+        dataPotenciahoraH.addColumn('number', 'Potência Hora');
+        optionsPotenciahoraH = {
+          title: 'Histórico de Potência Hora',
+          pointSize: 3,
+          legend: 'none',
+          animation:{
+            duration: 500,
+            easing: 'out'
+          },
+          curveType: 'function',
+          hAxis: {
+            title: 'Horário',
+            format: 'HH:mm:ss',
+            gridlines: {
+              count: 6
+            }
+          },
+          vAxis: {
+            title: 'Potência Hora (KW/H)',
+            format: 'long',
+            gridlines: {
+              count: 7
+            },
+            viewWindow: {
+              min: 0,
+              max: 300
+            }
+          }
+        };
+        dataPotenciahoraH.addRows([[new Date(), 0]]);
+        chartPotenciahoraH = new google.visualization.LineChart(document.getElementById('potenciahoraH'));
+        chartPotenciahoraH.draw(dataPotenciahoraH, optionsPotenciahoraH);
+        }
+
+    </script>
+  </head>
+<body onload="MQTTConnect()">
+
+  <div class="container-fluid">
+    <div class="row">
+       <div class="col-md-6 col-xl-3 mb-4">
+            <div class="card shadow border-left-primary py-2">
+                <div class="card-body">
+                    <div class="row align-items-center no-gutters">
+                        <div class="col mr-2">
+                            <div class="text-uppercase text-primary font-weight-bold text-xs mb-1"><span>Tensão em Tempo Real</span></div>
+                            <div class="text-dark font-weight-bold h5 mb-0" ><span id="tensao"></span> V</div>
+                        </div>
+                        <div class="col-auto"><i class="fas fa-memory fa-2x text-gray-300"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3 mb-4">
+            <div class="card shadow border-left-danger py-2">
+                <div class="card-body">
+                    <div class="row align-items-center no-gutters">
+                        <div class="col mr-2">
+                            <div class="text-uppercase text-danger font-weight-bold text-xs mb-1"><span>Corrente em Tempo real</span></div>
+                            <div class="text-dark font-weight-bold h5 mb-0" ><span id="corrente"></span> A</div>
+                        </div>
+                        <div class="col-auto"><i class="fas fa-percent fa-2x text-gray-300"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3 mb-4">
+            <div class="card shadow border-left-info py-2">
+                <div class="card-body">
+                    <div class="row align-items-center no-gutters">
+                        <div class="col mr-2">
+                            <div class="text-uppercase text-info font-weight-bold text-xs mb-1"><span>Potencia em Tempo Real</span></div>
+                             <div class="text-dark font-weight-bold h5 mb-0 mr-3"><span id="potencia"></span> W</div>                                       
+                                </div>
+                                <div class="col-auto"><i class="fas fa-percent fa-2x text-gray-300"></i></div>
+                            </div>
+                        </div>                            
+               </div>                    
+        </div>
+        <div class="col-md-6 col-xl-3 mb-4">
+            <div class="card shadow border-left-warning py-2">
+                <div class="card-body">
+                    <div class="row align-items-center no-gutters">
+                        <div class="col mr-2">
+                            <div class="text-uppercase text-warning font-weight-bold text-xs mb-1"><span>Potência Hora em Tempo Real</span></div>
+                            <div class="text-dark font-weight-bold h5 mb-0 mr-3"><span id="potenciahora"></span> KW/H</div> 
+                        </div>
+                        <div class="col-auto"><i class="fas fa-exchange-alt fa-2x text-gray-300"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>     
+   </div>
+
+</div>
+  <table align="center">
+    <tr>
+    <th>Última atualização:</th>
+    <th id="dt">dd/mm/aaaa hh:mm:ss</th>
+  </tr>
+  <tr>
+    <td id="voltageG" style="width: 200px; height: 200px;"></td>
+    <td id="voltageH" style="width: 600px; height: 200px;"></td>
+  </tr>
+  <tr>
+    <td id="correnteG" style="width: 200px; height: 200px;"></td>
+    <td id="correnteH" style="width: 600px; height: 200px;"></td>
+  </tr>
+  <tr>
+    <td id="potenciaG" style="width: 200px; height: 200px;"></td>
+    <td id="potenciaH" style="width: 600px; height: 200px;"></td>
+  </tr>
+  <tr>
+    <td id="potenciahoraG" style="width: 200px; height: 200px;"></td>
+    <td id="potenciahoraH" style="width: 600px; height: 200px;"></td>
+  </tr>
+
+</table>
+</body>
+</html>
