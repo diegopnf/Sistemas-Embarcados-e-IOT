@@ -1,0 +1,3 @@
+ESP32
+DHT11 - Porta 23
+Display I2C - Porta 22 e 21
